@@ -42,33 +42,34 @@ Conteudo de `~/check_battery.sh`:
 
 # --- PASSO 1: VERIFICAÇÃO FÍSICA ---
 HW_DETECT=$(cat /sys/class/power_supply/usb/hw_detect)
-
 if [ "$HW_DETECT" -eq 0 ]; then
     /home/phablet/telegram.sh "🔌 CABO DESLIGADO! O cabo saltou do telemóvel." &
     exit 0
 fi
 
-# --- PASSO 2: VERIFICAÇÃO DE CORRENTE (Ajustado para mV) ---
+# --- PASSO 2: VERIFICAÇÃO DE CORRENTE ---
 VOLTAGEM=$(cat /sys/class/power_supply/usb/voltage_now)
-
-# Como o teu reporta 5019 para ~5V, usamos 4000 como limite de segurança
 if [ "$VOLTAGEM" -lt 4000 ]; then
-    /home/phablet/telegram.sh "⚠️ TOMADA OFF! Cabo ligado mas sem energia ou voltagem muito baixa (Valor: $VOLTAGEM mV). Hipótese de voltagem insuficiente para carregar." &
+    /home/phablet/telegram.sh "⚠️ TOMADA OFF! Cabo ligado mas sem energia ou voltagem muito baixa (Valor: $VOLTAGEM mV)." &
     exit 0
 fi
 
-# --- PASSO 3: LÓGICA 20% / 80% ---
+# --- PASSO 3: LÓGICA 20% / 80% COM TRAVÃO DE SPAM ---
 CAPACITY=$(cat /sys/class/power_supply/battery/capacity)
+# Lemos o estado atual do limite para não repetir comandos nem mensagens
+CURRENT_LIMIT=$(cat /sys/class/power_supply/battery/charge_control_limit)
 
-if [ "$CAPACITY" -ge 80 ]; then
+if [ "$CAPACITY" -ge 80 ] && [ "$CURRENT_LIMIT" != "4" ]; then
+    # Só entra aqui se estiver >= 80% E o limite ainda não for 4
     echo 4 | sudo tee /sys/class/power_supply/battery/charge_control_limit > /dev/null
-    /home/phablet/telegram.sh "Status: Limite de 80% atingido ($CAPACITY%). charge_control_limit -> 4." &
-    echo "Status: Limite de 80% atingido ($CAPACITY%). charge_control_limit -> 4."
+    /home/phablet/telegram.sh "Status: Limite de 80% atingido ($CAPACITY%). Carga Bloqueada." &
+    echo "Status: Limite de 80% atingido. Bloqueado."
 
-elif [ "$CAPACITY" -le 20 ]; then
+elif [ "$CAPACITY" -le 20 ] && [ "$CURRENT_LIMIT" != "0" ]; then
+    # Só entra aqui se estiver <= 20% E o limite ainda não for 0
     echo 0 | sudo tee /sys/class/power_supply/battery/charge_control_limit > /dev/null
-    /home/phablet/telegram.sh "Status: Bateria em 20% ($CAPACITY%). charge_control_limit -> 0." &
-    echo "Status: Bateria em 20% ($CAPACITY%). charge_control_limit -> 0."
+    /home/phablet/telegram.sh "Status: Bateria em 20% ($CAPACITY%). Carga Libertada." &
+    echo "Status: Bateria em 20%. Libertado."
 fi
 ```
 atribui as  permissoes necessarias:
