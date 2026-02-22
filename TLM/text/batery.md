@@ -62,10 +62,12 @@ CAPACITY=$(cat /sys/class/power_supply/battery/capacity)
 
 if [ "$CAPACITY" -ge 80 ]; then
     echo 4 | sudo tee /sys/class/power_supply/battery/charge_control_limit > /dev/null
+    /home/phablet/telegram.sh "Status: Limite de 80% atingido ($CAPACITY%). charge_control_limit -> 4." &
     echo "Status: Limite de 80% atingido ($CAPACITY%). charge_control_limit -> 4."
 
 elif [ "$CAPACITY" -le 20 ]; then
     echo 0 | sudo tee /sys/class/power_supply/battery/charge_control_limit > /dev/null
+    /home/phablet/telegram.sh "Status: Bateria em 20% ($CAPACITY%). charge_control_limit -> 0." &
     echo "Status: Bateria em 20% ($CAPACITY%). charge_control_limit -> 0."
 fi
 ```
@@ -80,6 +82,20 @@ sudo crontab -e
 ```
 
 # Outros comandos
+## Repor os valores
+
+* desligar o cabo e executar
+```
+# 1. Repor o limite de carga para o padrão (0 = sem limite)
+echo 0 | sudo tee /sys/class/power_supply/battery/charge_control_limit
+
+# 2. Garantir que a suspensão de entrada está desligada (0 = a receber energia)
+echo 0 | sudo tee /sys/class/power_supply/battery/input_suspend
+
+# 3. Verificar se a voltagem voltou ao normal
+cat /sys/class/power_supply/usb/voltage_now
+```
+
 ```bash
 if [ $(cat /sys/class/power_supply/battery/capacity) -ge 80 ]; then
     echo 4 | sudo tee /sys/class/power_supply/battery/charge_control_limit > /dev/null
@@ -106,7 +122,7 @@ while true; do
   fi
   
   echo -n "[$h] Bat: $c% | Status: $s | Fonte: $fonte | Temp: "; expr $t / 10; 
-  sleep 60; 
+  sleep 5; 
 done
 ```
 
