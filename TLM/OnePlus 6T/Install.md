@@ -83,6 +83,23 @@ recomendo usares o full-upgrade para garantir que as dependências novas são re
 sudo apt full-upgrade -y
 ```
 
+# Impedir que o servidor entre em modo de suspensão (Sleep/Suspend)
+sudo systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target
+
+# Garantir que o logind não suspende o sistema por inatividade
+sudo mkdir -p /etc/systemd/logind.conf.d/
+echo -e "[Login]\nHandleLidSwitch=ignore\nIdleAction=ignore" | sudo tee /etc/systemd/logind.conf.d/00-server-mode.conf
+
+## Localização e Tempo
+Para garantir a consistência dos logs e da base de dados num contexto internacional:
+
+```bash
+sudo rm /etc/localtime
+sudo ln -s /usr/share/zoneinfo/UTC /etc/localtime
+date
+```
+
+
 ## Fase 4: Estabilização do Cluster (Alta Disponibilidade)
 ### 9. Autostart em Energia (Modo Servidor)
 ```bash
