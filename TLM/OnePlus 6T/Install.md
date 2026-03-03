@@ -20,12 +20,7 @@ fastboot oem unlock
 ### 3. Instalar o Kernel (Halium-Boot)
 Este ficheiro faz a ponte entre o hardware OnePlus e o Linux.
  ```bash
- fastboot oem install halium-boot
-```
-
-### 4. Entrar na Recovery (TWRP)
-```bash
-fastboot boot twrp-3.3.1-32-fajita-Pie-mauronofrio.img
+fastboot flash boot halium-boot.img
 ```
 
 ### 5. Preparação no TWRP
@@ -37,7 +32,7 @@ Volta ao menu principal: **Advanced -> ADB Sideload**.
 
 ### 6. Instalação do Droidian
 ```bash
-fastboot boot twrp-3.3.1-32-fajita-Pie-mauronofrio.img
+adb sideload droidian-rootfs-api28gsi-arm64_20230603.zip
 ```
 
 ## Fase 3: Configuração do Sistema (Pós-Instalação)
@@ -57,26 +52,42 @@ sudo rm /etc/apt/sources.list.d/mobian.sources
 sudo rm /etc/apt/sources.list.d/gnome-clocks.list
 sudo rm /etc/apt/sources.list.d/gst.list
 sudo rm /etc/apt/sources.list.d/phone.list
+sudo rm /etc/apt/sources.list.d/gtk4.list
 ```
 Validar Repositório Droidian (Trusted)
 ```bash
 sudo tee /etc/apt/sources.list.d/droidian.sources <<EOF
 Types: deb
-URIs: [https://production.repo.droidian.org](https://production.repo.droidian.org)
-Suites: bullseye
+URIs: https://production.repo.droidian.org
+Suites: bookworm
 Components: main
 Trusted: yes
 EOF
 ```
-Atualizar o sistema
+
+Limpeza Final dos "Fantasmas"
+```bash
+sudo rm -f /etc/apt/sources.list.d/mobian.list /etc/apt/sources.list.d/gnome-clocks.list /etc/apt/sources.list.d/gst.list /etc/apt/sources.list.d/phone.list /etc/apt/sources.list.d/gtk4.list /etc/apt/sources.list.d/libaperture.list /etc/apt/sources.list.d/ofono2mm.list /etc/apt/sources.list.d/callaudiod.list
+```
+
+Agora sim, limpa a cache e tenta o update:
 ```bash
 sudo rm -rf /var/lib/apt/lists/*
 sudo apt update
-sudo apt upgrade -y
+```
+### O Grande Passo: Full Upgrade
+Agora que a base do Debian 12 (Bookworm) está sólida e os repositórios estão sincronizados,
+vamos atualizar esses 314 pacotes. Como este é um salto de versão e de imagem,
+recomendo usares o full-upgrade para garantir que as dependências novas são resolvidas corretamente.
+```bash
+sudo apt full-upgrade -y
 ```
 
 ## Fase 4: Estabilização do Cluster (Alta Disponibilidade)
 ### 9. Autostart em Energia (Modo Servidor)
+```bash
+fastboot oem off-mode-charge 0
+```
 
 Configura o telemóvel para ligar automaticamente quando recebe energia via USB.
 EXECUTAR NO PC (Modo Fastboot):
