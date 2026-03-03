@@ -1,4 +1,4 @@
-# 🚀 OnePlus 6T (fajita) - Droidian Cluster Node Setup
+# OnePlus 6T (fajita) - Droidian Cluster Node Setup
 
 Este guia documenta o procedimento de instalação e estabilização do **Droidian (Debian Bullseye)** no OnePlus 6T para utilização como nó de cluster.
 
@@ -37,14 +37,34 @@ adb sideload droidian-rootfs-api28gsi-arm64_20230603.zip
 
 ## Fase 3: Configuração do Sistema (Pós-Instalação)
 
-### 7. Acesso Remoto (SSH)
+**Acesso Remoto (SSH):**
 ```bash
 # No teu PC, se o host mudar:
 ssh-keygen -R 192.168.x.xx
 ssh droidian@192.168.x.xx
 ```
 
-### 8. Limpeza de Repositórios e Atualização
+**Impedir que o servidor entre em modo de suspensão (Sleep/Suspend)**
+```bash
+sudo systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target
+```
+
+**Garantir que o logind não suspende o sistema por inatividade**
+```bash
+sudo mkdir -p /etc/systemd/logind.conf.d/
+echo -e "[Login]\nHandleLidSwitch=ignore\nIdleAction=ignore" | sudo tee /etc/systemd/logind.conf.d/00-server-mode.conf
+```
+
+### Localização e Tempo
+Para garantir a consistência dos logs e da base de dados num contexto internacional:
+
+```bash
+sudo rm /etc/localtime
+sudo ln -s /usr/share/zoneinfo/UTC /etc/localtime
+date
+```
+
+### Limpeza de Repositórios e Atualização
 Remove os repositórios mortos e configura a fonte oficial Droidian:
 Remover fontes obsoletas
 ```bash
@@ -83,21 +103,10 @@ recomendo usares o full-upgrade para garantir que as dependências novas são re
 sudo apt full-upgrade -y
 ```
 
-# Impedir que o servidor entre em modo de suspensão (Sleep/Suspend)
-sudo systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target
 
-# Garantir que o logind não suspende o sistema por inatividade
-sudo mkdir -p /etc/systemd/logind.conf.d/
-echo -e "[Login]\nHandleLidSwitch=ignore\nIdleAction=ignore" | sudo tee /etc/systemd/logind.conf.d/00-server-mode.conf
 
-## Localização e Tempo
-Para garantir a consistência dos logs e da base de dados num contexto internacional:
 
-```bash
-sudo rm /etc/localtime
-sudo ln -s /usr/share/zoneinfo/UTC /etc/localtime
-date
-```
+
 
 
 ## Fase 4: Estabilização do Cluster (Alta Disponibilidade)
