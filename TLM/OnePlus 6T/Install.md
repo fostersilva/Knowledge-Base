@@ -155,6 +155,61 @@ elif [ "$CAPACITY" -le 50 ]; then
 fi
 ```
 
+### OLD
+```bash
+#!/bin/bash
+
+# --- VARIAVEIS GLOBAIS ---
+NOW=$(date "+%H:%M:%S")
+LOG_FILE="/home/droidian/battery_debug.log"
+
+# --- PASSO 1: VERIFICACAO FISICA E RESET DE SEGURANÇA ---
+HW_DETECT=$(cat /sys/class/power_supply/usb/hw_detect)
+
+if [ "$HW_DETECT" -eq 0 ]; then
+    # O cabo foi removido! Vamos limpar os "travoes" para evitar bloqueios no hardware
+    sudo chmod 666 /sys/class/power_supply/battery/charge_control_limit
+    echo 0 | sudo tee /sys/class/power_supply/battery/charge_control_limit > /dev/null
+    
+    # Se usares o input_suspend, limpa-o também
+    sudo chmod 666 /sys/class/power_supply/battery/input_suspend
+    echo 0 | sudo tee /sys/class/power_supply/battery/input_suspend > /dev/null
+    
+    echo "[$NOW] Cabo desligado. Reset de limites efetuado para seguranca." >> "$LOG_FILE"
+    exit 0
+fi
+
+# --- PASSO 2: VERIFICAÇÃO DE CORRENTE ---
+VOLTAGEM=$(cat /sys/class/power_supply/usb/voltage_now)
+if [ "$VOLTAGEM" -lt 4000 ]; then
+    # /home/droidian/telegram.sh "⚠️ TOMADA OFF! Voltagem: $VOLTAGEM mV." &
+    exit 0
+fi
+
+# --- PASSO 3: LÓGICA 20% / 80% ---
+CAPACITY=$(cat /sys/class/power_supply/battery/capacity)
+CURRENT_LIMIT=$(cat /sys/class/power_supply/battery/charge_control_limit)
+
+if [ "$CAPACITY" -ge 80 ]; then
+    if [ "$CURRENT_LIMIT" != "4" ]; then
+        sudo chmod 666 /sys/class/power_supply/battery/charge_control_limit
+        echo 4 | sudo tee /sys/class/power_supply/battery/charge_control_limit > /dev/null
+        echo "[$NOW] Limite 80% ($CAPACITY%). Limit definido para 4." >> "$LOG_FILE"
+        # /home/droidian/telegram.sh "🔋 Carga Bloqueada ($CAPACITY%)." &
+        sleep 1
+    fi
+
+elif [ "$CAPACITY" -le 20 ]; then
+    if [ "$CURRENT_LIMIT" != "0" ]; then
+        sudo chmod 666 /sys/class/power_supply/battery/charge_control_limit
+        echo 0 | sudo tee /sys/class/power_supply/battery/charge_control_limit > /dev/null
+        echo "[$NOW] Bateria 20% ($CAPACITY%). Limit definido para 0." >> "$LOG_FILE"
+        # /home/droidian/telegram.sh "🪫 Carga Libertada ($CAPACITY%)." &
+        sleep 1
+    fi
+fi
+```
+
 
 
 
