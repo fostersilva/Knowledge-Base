@@ -214,6 +214,98 @@ fi
 
 
 
+
+hkhk
+```bash
+#!/bin/bash
+
+echo "📡 Monitor de Eventos iniciado... À espera de mudanças no hardware."
+
+# O udevadm monitor --property despeja todas as variáveis da bateria a cada mudança
+udevadm monitor --subsystem-match=power_supply --property | while read -r linha; do
+
+    # 1. Capturar o nível de bateria atual do fluxo de dados
+    if echo "$linha" | grep -q "POWER_SUPPLY_CAPACITY="; then
+        NIVEL=$(echo "$linha" | cut -d'=' -f2)
+        
+        # 2. Se o cabo for ligado (ONLINE=1), decidimos o que fazer com base no nível
+        # Nota: O udev envia vários eventos; filtramos pelo que indica presença de energia
+        if [ "$(cat /sys/class/power_supply/usb/present)" -eq 1 ] || [ "$(cat /sys/class/power_supply/ac/present)" -eq 1 ]; then
+            
+            if [ "$NIVEL" -lt 80 ]; then
+                # Se estiver abaixo de 80, queremos carregar!
+                echo 0 > /sys/class/power_supply/battery/charge_control_limit
+                echo 0 > /sys/class/power_supply/battery/input_suspend
+                echo "[$(date)] ⚡ Nível: $NIVEL% - Abaixo do limite. Carga LIBERADA (0)."
+            else
+                # Se já estiver acima ou igual a 80, mantemos o bloqueio
+                echo 4 > /sys/class/power_supply/battery/charge_control_limit
+                echo "[$(date)] 🛡️ Nível: $NIVEL% - Limite atingido. Carga BLOQUEADA (4)."
+            fi
+        fi
+    fi
+done
+```
+
+
+
+
+
+
+```bash
+#!/bin/bash
+
+FICHEIRO_USB="/sys/class/power_supply/usb/present"
+ESTADO_ANTERIOR=$(cat "$FICHEIRO_USB")
+
+echo "[$(date)] Sentinela USB Ativo. A vigiar o cabo..."
+
+while true; do
+    ESTADO_ATUAL=$(cat "$FICHEIRO_USB")
+
+    # Se o estado mudou (algu  m ligou ou desligou o cabo)
+    if [ "$ESTADO_ATUAL" != "$ESTADO_ANTERIOR" ]; then
+        if [ "$ESTADO_ATUAL" -eq 1 ]; then
+            # CABO LIGADO: Reset Zen Imediato
+            echo 0 > /sys/class/power_supply/battery/charge_control_limit
+            echo 0 > /sys/class/power_supply/battery/input_suspend
+            echo "[$(date)]  ^=^t^l CABO DETETADO: Reset Zen aplicado instantaneamente!"
+        else
+            # CABO DESLIGADO
+            echo 0 > /sys/class/power_supply/battery/input_suspend
+            echo "[$(date)]  ^z   ^o CABO REMOVIDO: Limpeza efetuada."
+        fi
+        ESTADO_ANTERIOR=$ESTADO_ATUAL
+    fi
+    sleep 0.5 # Verifica 2 vezes por segundo (imediato para o humano, leve para o CPU)
+done
+
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ## Fase 4: Estabilização do Cluster (Alta Disponibilidade)
 ### 9. Autostart em Energia (Modo Servidor)
 ```bash
