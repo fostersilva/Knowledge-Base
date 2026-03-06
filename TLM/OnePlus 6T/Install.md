@@ -70,6 +70,25 @@ sudo ln -s /usr/share/zoneinfo/UTC /etc/localtime
 date
 ```
 
+Desativar o "Spam" da Câmara (O passo vital): Antes de removeres as apps, tens de calar o driver da câmara, senão o CPU continuará a 100%
+```bash
+echo "kernel.printk = 3 4 1 3" | sudo tee -a /etc/sysctl.conf
+sudo sysctl -p
+```
+
+Remover/Desativar o Chatty: Como vimos, o Chatty tenta processar demasiados eventos e devora a RAM.
+```bash
+sudo mv /usr/bin/chatty /usr/bin/chatty.bak
+sudo killall -9 chatty
+```
+
+Neutralizar o "Batman" (Gestão de Energia)
+```bash
+sudo systemctl stop upower
+sudo systemctl disable upower
+sudo systemctl mask upower
+```
+
 ### Limpeza de Repositórios e Atualização
 Remove os repositórios mortos e configura a fonte oficial Droidian:
 Remover fontes obsoletas
