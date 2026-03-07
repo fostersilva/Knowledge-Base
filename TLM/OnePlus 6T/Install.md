@@ -147,3 +147,7 @@ forçando a interface de rede móvel (rmnet_data0 ou similar):
 ```bash
 ping -I rmnet_data0 -c 4 8.8.8.8
 ```
+
+```bash
+sudo reboot -f
+```
