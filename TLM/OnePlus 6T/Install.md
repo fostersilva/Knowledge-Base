@@ -130,16 +130,56 @@ sudo apt autoremove
 
  Configurar a Internet da MEO (Se a lista estiver vazia)
 ```bash
-/usr/share/ofono/scripts/create-context /ril_0 internet "internet"
+dbus-send --system --print-reply --dest=org.ofono /ril_0/context1 org.ofono.ConnectionContext.SetProperty string:"Active" variant:boolean:true
+ping -I rmnet_data0 -c 4 8.8.8.8
 ```
 
-Ativar os Dados Móveis
+
+O teu SIM está identificado pela pasta 268069666419730
 ```bash
-/usr/share/ofono/scripts/activate-context /ril_0 1
+/var/lib/ofono/
 ```
-Este comando diz ao gestor de ligações para manter a rádio de dados ligada:
+
+Criar o ficheiro de configuração global
 ```bash
-dbus-send --system --print-reply --dest=org.ofono /ril_0 org.ofono.ConnectionManager.SetProperty string:"Powered" variant:boolean:true
+sudo nano /etc/ofono/main.conf
+```
+
+Escreve (ou cola) estas 3 linhas:
+```bash
+[General]
+ExpectPreconfiguredContexts=true
+StrictContexts=false
+```
+
+Ficheiro de Estado do SIM
+```bash
+sudo nano /var/lib/ofono/268069666419730/gprs
+```
+
+Apaga tudo o que lá estiver e deixa exatamente assim:
+```bash
+[Settings]
+Powered=true
+RoamingAllowed=true
+
+[context1]
+Name=Tmn Internet
+AccessPointName=internet
+Username=tmn
+Password=tmn
+Type=internet
+Protocol=dual
+Active=true
+```
+
+Aplicar a Configuração de Sistema
+```bash
+sudo systemctl restart ofono
+```
+
+```bash
+sudo reboot -f
 ```
 
 Para teres a certeza que o servidor tem internet sem depender de Wi-Fi, tenta fazer um ping
@@ -148,6 +188,3 @@ forçando a interface de rede móvel (rmnet_data0 ou similar):
 ping -I rmnet_data0 -c 4 8.8.8.8
 ```
 
-```bash
-sudo reboot -f
-```
