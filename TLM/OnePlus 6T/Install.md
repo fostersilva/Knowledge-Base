@@ -141,19 +141,7 @@ ping -I rmnet_data0 -c 4 8.8.8.8
 
 O teu SIM está identificado pela pasta 268069666419730
 ```bash
-/var/lib/ofono/
-```
-
-Criar o ficheiro de configuração global
-```bash
-sudo nano /etc/ofono/main.conf
-```
-
-Escreve (ou cola) estas 3 linhas:
-```bash
-[General]
-ExpectPreconfiguredContexts=true
-StrictContexts=false
+sudo ls -l /var/lib/ofono/
 ```
 
 Ficheiro de Estado do SIM
@@ -172,18 +160,56 @@ Name=Tmn Internet
 AccessPointName=internet
 Username=tmn
 Password=tmn
+AuthenticationMethod=any
 Type=internet
 Protocol=dual
 Active=true
 ```
-
-Aplicar a Configuração de Sistema
+Trancar o ficheiro (Para o sistema não o apagar)
 ```bash
-sudo systemctl restart ofono
+sudo chattr +i /var/lib/ofono/268069666419730/gprs
+```
+
+O Droidian desliga o hardware no arranque. Este serviço volta a ligá-lo 15 segundos depois de ligares o aparelho.
+```bash
+sudo nano /etc/systemd/system/ligar-4g.service
+```
+inserir
+```bash
+[Unit]
+Description=Forçar 4G - Loop de Conexão
+After=ofono.service
+Wants=ofono.service
+
+[Service]
+Type=simple
+# O segredo está no "set -e": se um comando falhar, o serviço crasha e o systemd reinicia-o
+ExecStart=/bin/sh -c 'set -e; sleep 20; \
+dbus-send --system --print-reply --dest=org.ofono /ril_0 org.ofono.Modem.SetProperty string:"Powered" variant:boolean:true; \
+sleep 5; \
+dbus-send --system --print-reply --dest=org.ofono /ril_0 org.ofono.Modem.SetProperty string:"Online" variant:boolean:true; \
+sleep 5; \
+dbus-send --system --print-reply --dest=org.ofono /ril_0/context1 org.ofono.ConnectionContext.SetProperty string:"Active" variant:boolean:true'
+
+# Reinicia sempre que falhar (ex: modem ocupado ou SIM não pronto)
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart ligar-4g.service
 ```
 
 ```bash
 sudo reboot -f
+```
+```bash
+sudo journalctl -u ligar-4g.service -f
+ip addr show rmnet_data0
 ```
 
 Para teres a certeza que o servidor tem internet sem depender de Wi-Fi, tenta fazer um ping
