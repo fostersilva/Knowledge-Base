@@ -128,6 +128,10 @@ sudo apt purge firefox-esr
 sudo apt autoremove
 ```
 
+```bash
+sudo reboot -f
+```
+
  Configurar a Internet da MEO (Se a lista estiver vazia)
 ```bash
 dbus-send --system --print-reply --dest=org.ofono /ril_0/context1 org.ofono.ConnectionContext.SetProperty string:"Active" variant:boolean:true
