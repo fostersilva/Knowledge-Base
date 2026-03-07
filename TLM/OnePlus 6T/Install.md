@@ -101,10 +101,9 @@ Agora sim, limpa a cache e tenta o update:
 ```bash
 sudo rm -rf /var/lib/apt/lists/*
 sudo apt update
+sudo apt autoremove
 ```
-```bash
-sudo apt upgrade -y
-```
+
 Desativar o "Spam" da Câmara (O passo vital): Antes de removeres as apps, tens de calar o driver da câmara, senão o CPU continuará a 100%
 ```bash
 echo "kernel.printk = 3 4 1 3" | sudo tee -a /etc/sysctl.conf
