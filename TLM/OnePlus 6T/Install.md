@@ -119,10 +119,7 @@ sudo mv /usr/bin/chatty /usr/bin/chatty.bak
 ```bash
 sudo killall -9 chatty
 ```
-Neutralizar o "Batman" (Gestão de Energia)
-```bash
-sudo apt remove batman
-```
+
 ```bash
 sudo apt purge firefox-esr
 sudo apt autoremove
@@ -201,7 +198,7 @@ WantedBy=multi-user.target
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl restart ligar-4g.service
+sudo systemctl enable ligar-4g.service
 ```
 
 ```bash
