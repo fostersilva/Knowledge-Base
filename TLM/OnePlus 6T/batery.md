@@ -30,6 +30,10 @@ adiciona:
 ```bash
 #!/bin/bash
 
+# FORÇAR PERMISSÕES NO ARRANQUE (O SEGREDO)
+sudo chmod 666 /sys/class/power_supply/battery/charge_control_limit
+sudo chmod 666 /sys/class/power_supply/battery/input_suspend
+
 FICHEIRO_USB="/sys/class/power_supply/usb/present"
 FICHEIRO_BAT="/sys/class/power_supply/battery/capacity"
 ESTADO_ANTERIOR=$(cat "$FICHEIRO_USB")
