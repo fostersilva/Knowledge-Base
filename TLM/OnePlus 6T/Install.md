@@ -98,6 +98,7 @@ sudo rm -f /etc/apt/sources.list.d/mobian.list /etc/apt/sources.list.d/gnome-clo
 ```
 
 Agora sim, limpa a cache e tenta o update:
+Se o teu objetivo é ter um servidor estável, a regra de ouro no Linux é "se funciona, não mexe"
 ```bash
 sudo rm -rf /var/lib/apt/lists/*
 sudo apt update
@@ -131,7 +132,7 @@ sudo apt autoremove
 sudo reboot -f
 ```
 
- Configurar a Internet da MEO (Se a lista estiver vazia)
+Configurar a Internet da MEO (Se a lista estiver vazia)
 ```bash
 dbus-send --system --print-reply --dest=org.ofono /ril_0/context1 org.ofono.ConnectionContext.SetProperty string:"Active" variant:boolean:true
 ping -I rmnet_data0 -c 4 8.8.8.8
