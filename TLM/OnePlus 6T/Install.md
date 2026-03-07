@@ -70,25 +70,6 @@ sudo ln -s /usr/share/zoneinfo/UTC /etc/localtime
 date
 ```
 
-Desativar o "Spam" da Câmara (O passo vital): Antes de removeres as apps, tens de calar o driver da câmara, senão o CPU continuará a 100%
-```bash
-echo "kernel.printk = 3 4 1 3" | sudo tee -a /etc/sysctl.conf
-sudo sysctl -p
-```
-
-Remover/Desativar o Chatty: Como vimos, o Chatty tenta processar demasiados eventos e devora a RAM.
-```bash
-sudo mv /usr/bin/chatty /usr/bin/chatty.bak
-sudo killall -9 chatty
-```
-
-Neutralizar o "Batman" (Gestão de Energia)
-```bash
-sudo systemctl stop upower
-sudo systemctl disable upower
-sudo systemctl mask upower
-```
-
 ### Limpeza de Repositórios e Atualização
 Remove os repositórios mortos e configura a fonte oficial Droidian:
 Remover fontes obsoletas
@@ -99,6 +80,7 @@ sudo rm /etc/apt/sources.list.d/gst.list
 sudo rm /etc/apt/sources.list.d/phone.list
 sudo rm /etc/apt/sources.list.d/gtk4.list
 ```
+
 Validar Repositório Droidian (Trusted)
 ```bash
 sudo tee /etc/apt/sources.list.d/droidian.sources <<EOF
@@ -120,6 +102,32 @@ Agora sim, limpa a cache e tenta o update:
 sudo rm -rf /var/lib/apt/lists/*
 sudo apt update
 ```
+```bash
+sudo apt upgrade -y
+```
+Desativar o "Spam" da Câmara (O passo vital): Antes de removeres as apps, tens de calar o driver da câmara, senão o CPU continuará a 100%
+```bash
+echo "kernel.printk = 3 4 1 3" | sudo tee -a /etc/sysctl.conf
+```
+```bash
+sudo sysctl -p
+```
+Remover/Desativar o Chatty: Como vimos, o Chatty tenta processar demasiados eventos e devora a RAM.
+```bash
+sudo mv /usr/bin/chatty /usr/bin/chatty.bak
+```
+```bash
+sudo killall -9 chatty
+```
+Neutralizar o "Batman" (Gestão de Energia)
+```bash
+sudo apt remove batman
+```
+
+
+
+
+
 ### O Grande Passo: Full Upgrade
 Agora que a base do Debian 12 (Bookworm) está sólida e os repositórios estão sincronizados,
 vamos atualizar esses 314 pacotes. Como este é um salto de versão e de imagem,
