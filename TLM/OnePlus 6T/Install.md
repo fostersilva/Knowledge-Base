@@ -123,264 +123,27 @@ Neutralizar o "Batman" (Gestão de Energia)
 ```bash
 sudo apt remove batman
 ```
-
-
-
-
-
-### O Grande Passo: Full Upgrade
-Agora que a base do Debian 12 (Bookworm) está sólida e os repositórios estão sincronizados,
-vamos atualizar esses 314 pacotes. Como este é um salto de versão e de imagem,
-recomendo usares o full-upgrade para garantir que as dependências novas são resolvidas corretamente.
 ```bash
-sudo apt full-upgrade -y
+sudo apt purge firefox-esr
+sudo apt autoremove
 ```
 
+ Configurar a Internet da MEO (Se a lista estiver vazia)
 ```bash
-chmod 666 /sys/class/power_supply/battery/charge_control_limit
-```
-## hh
-
-```bash
-#!/bin/bash
-
-# Configurações de Caminhos
-LOG_FILE="/home/droidian/bateria_monitor.log"
-NOW=$(date +"%Y-%m-%d %H:%M:%S")
-
-# --- PASSO 1: DETEÇÃO DE CABO ---
-# Usamos o 'present' para saber se o carregador está lá
-USB_PRESENT=$(cat /sys/class/power_supply/usb/present 2>/dev/null || echo 0)
-
-if [ "$USB_PRESENT" -eq 0 ]; then
-    # Se tiraste o cabo à mão, limpamos o suspender para quando voltares a ligar
-    echo 0 | sudo tee /sys/class/power_supply/battery/input_suspend > /dev/null
-    echo "[$NOW] Cabo removido. Reset do input_suspend efetuado." >> "$LOG_FILE"
-    exit 0
-fi
-
-# --- PASSO 2: LÓGICA DE CLUSTER (80% / 50%) ---
-CAPACITY=$(cat /sys/class/power_supply/battery/capacity)
-# Lemos o estado atual do suspender (0 = a carregar, 1 = suspenso/discharging)
-CURRENT_SUSPEND=$(cat /sys/class/power_supply/battery/input_suspend)
-
-# LIMITE SUPERIOR: Chegou aos 80%, "puxamos a ficha" via software
-if [ "$CAPACITY" -ge 80 ]; then
-    if [ "$CURRENT_SUSPEND" != "1" ]; then
-        echo 1 | sudo tee /sys/class/power_supply/battery/input_suspend > /dev/null
-        echo "[$NOW] 🛑 Limite 80% atingido ($CAPACITY%). Entrada de energia SUSPENSA." >> "$LOG_FILE"
-        # /home/droidian/telegram.sh "🛑 Nó OnePlus: Carga suspensa aos $CAPACITY%." &
-    fi
-
-# LIMITE INFERIOR: Baixou dos 50%, deixamos o gajo "comer"
-elif [ "$CAPACITY" -le 50 ]; then
-    if [ "$CURRENT_SUSPEND" != "0" ]; then
-        echo 0 | sudo tee /sys/class/power_supply/battery/input_suspend > /dev/null
-        echo "[$NOW] ⚡ Limite 50% atingido ($CAPACITY%). Entrada de energia REATIVADA." >> "$LOG_FILE"
-        # /home/droidian/telegram.sh "⚡ Nó OnePlus: A carregar desde os $CAPACITY%." &
-    fi
-fi
+/usr/share/ofono/scripts/create-context /ril_0 internet "internet"
 ```
 
-### OLD
+Ativar os Dados Móveis
 ```bash
-#!/bin/bash
-
-# --- VARIAVEIS GLOBAIS ---
-NOW=$(date "+%H:%M:%S")
-LOG_FILE="/home/droidian/battery_debug.log"
-
-# --- PASSO 1: VERIFICACAO FISICA E RESET DE SEGURANÇA ---
-HW_DETECT=$(cat /sys/class/power_supply/usb/hw_detect)
-
-if [ "$HW_DETECT" -eq 0 ]; then
-    # O cabo foi removido! Vamos limpar os "travoes" para evitar bloqueios no hardware
-    sudo chmod 666 /sys/class/power_supply/battery/charge_control_limit
-    echo 0 | sudo tee /sys/class/power_supply/battery/charge_control_limit > /dev/null
-    
-    # Se usares o input_suspend, limpa-o também
-    sudo chmod 666 /sys/class/power_supply/battery/input_suspend
-    echo 0 | sudo tee /sys/class/power_supply/battery/input_suspend > /dev/null
-    
-    echo "[$NOW] Cabo desligado. Reset de limites efetuado para seguranca." >> "$LOG_FILE"
-    exit 0
-fi
-
-# --- PASSO 2: VERIFICAÇÃO DE CORRENTE ---
-VOLTAGEM=$(cat /sys/class/power_supply/usb/voltage_now)
-if [ "$VOLTAGEM" -lt 4000 ]; then
-    # /home/droidian/telegram.sh "⚠️ TOMADA OFF! Voltagem: $VOLTAGEM mV." &
-    exit 0
-fi
-
-# --- PASSO 3: LÓGICA 20% / 80% ---
-CAPACITY=$(cat /sys/class/power_supply/battery/capacity)
-CURRENT_LIMIT=$(cat /sys/class/power_supply/battery/charge_control_limit)
-
-if [ "$CAPACITY" -ge 80 ]; then
-    if [ "$CURRENT_LIMIT" != "4" ]; then
-        sudo chmod 666 /sys/class/power_supply/battery/charge_control_limit
-        echo 4 | sudo tee /sys/class/power_supply/battery/charge_control_limit > /dev/null
-        echo "[$NOW] Limite 80% ($CAPACITY%). Limit definido para 4." >> "$LOG_FILE"
-        # /home/droidian/telegram.sh "🔋 Carga Bloqueada ($CAPACITY%)." &
-        sleep 1
-    fi
-
-elif [ "$CAPACITY" -le 20 ]; then
-    if [ "$CURRENT_LIMIT" != "0" ]; then
-        sudo chmod 666 /sys/class/power_supply/battery/charge_control_limit
-        echo 0 | sudo tee /sys/class/power_supply/battery/charge_control_limit > /dev/null
-        echo "[$NOW] Bateria 20% ($CAPACITY%). Limit definido para 0." >> "$LOG_FILE"
-        # /home/droidian/telegram.sh "🪫 Carga Libertada ($CAPACITY%)." &
-        sleep 1
-    fi
-fi
+/usr/share/ofono/scripts/activate-context /ril_0 1
+```
+Este comando diz ao gestor de ligações para manter a rádio de dados ligada:
+```bash
+dbus-send --system --print-reply --dest=org.ofono /ril_0 org.ofono.ConnectionManager.SetProperty string:"Powered" variant:boolean:true
 ```
 
-
-
-
-
-
-hkhk
+Para teres a certeza que o servidor tem internet sem depender de Wi-Fi, tenta fazer um ping
+forçando a interface de rede móvel (rmnet_data0 ou similar):
 ```bash
-#!/bin/bash
-
-echo "📡 Monitor de Eventos iniciado... À espera de mudanças no hardware."
-
-# O udevadm monitor --property despeja todas as variáveis da bateria a cada mudança
-udevadm monitor --subsystem-match=power_supply --property | while read -r linha; do
-
-    # 1. Capturar o nível de bateria atual do fluxo de dados
-    if echo "$linha" | grep -q "POWER_SUPPLY_CAPACITY="; then
-        NIVEL=$(echo "$linha" | cut -d'=' -f2)
-        
-        # 2. Se o cabo for ligado (ONLINE=1), decidimos o que fazer com base no nível
-        # Nota: O udev envia vários eventos; filtramos pelo que indica presença de energia
-        if [ "$(cat /sys/class/power_supply/usb/present)" -eq 1 ] || [ "$(cat /sys/class/power_supply/ac/present)" -eq 1 ]; then
-            
-            if [ "$NIVEL" -lt 80 ]; then
-                # Se estiver abaixo de 80, queremos carregar!
-                echo 0 > /sys/class/power_supply/battery/charge_control_limit
-                echo 0 > /sys/class/power_supply/battery/input_suspend
-                echo "[$(date)] ⚡ Nível: $NIVEL% - Abaixo do limite. Carga LIBERADA (0)."
-            else
-                # Se já estiver acima ou igual a 80, mantemos o bloqueio
-                echo 4 > /sys/class/power_supply/battery/charge_control_limit
-                echo "[$(date)] 🛡️ Nível: $NIVEL% - Limite atingido. Carga BLOQUEADA (4)."
-            fi
-        fi
-    fi
-done
+ping -I rmnet_data0 -c 4 8.8.8.8
 ```
-
-
-
-
-
-
-```bash
-#!/bin/bash
-
-FICHEIRO_USB="/sys/class/power_supply/usb/present"
-ESTADO_ANTERIOR=$(cat "$FICHEIRO_USB")
-
-echo "[$(date)] Sentinela USB Ativo. A vigiar o cabo..."
-
-while true; do
-    ESTADO_ATUAL=$(cat "$FICHEIRO_USB")
-
-    # Se o estado mudou (algu  m ligou ou desligou o cabo)
-    if [ "$ESTADO_ATUAL" != "$ESTADO_ANTERIOR" ]; then
-        if [ "$ESTADO_ATUAL" -eq 1 ]; then
-            # CABO LIGADO: Reset Zen Imediato
-            echo 0 > /sys/class/power_supply/battery/charge_control_limit
-            echo 0 > /sys/class/power_supply/battery/input_suspend
-            echo "[$(date)]  ^=^t^l CABO DETETADO: Reset Zen aplicado instantaneamente!"
-        else
-            # CABO DESLIGADO
-            echo 0 > /sys/class/power_supply/battery/input_suspend
-            echo "[$(date)]  ^z   ^o CABO REMOVIDO: Limpeza efetuada."
-        fi
-        ESTADO_ANTERIOR=$ESTADO_ATUAL
-    fi
-    sleep 0.5 # Verifica 2 vezes por segundo (imediato para o humano, leve para o CPU)
-done
-
-
-
-
-```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-## Fase 4: Estabilização do Cluster (Alta Disponibilidade)
-### 9. Autostart em Energia (Modo Servidor)
-```bash
-fastboot oem off-mode-charge 0
-```
-
-Configura o telemóvel para ligar automaticamente quando recebe energia via USB.
-EXECUTAR NO PC (Modo Fastboot):
-```bash
-fastboot oem off-mode-charge 0
-```
-
-### 10. Persistência de Erros (Kernel Panic)
-Configura o nó para reiniciar sozinho em caso de crash do sistema.
-
-Tornar o Auto-Restart Permanente
-```bash
-sudo tee /etc/sysctl.d/99-restart-on-panic.conf <<EOF
-kernel.panic = 10
-kernel.panic_on_oops = 1
-EOF
-```
-
-Aplicar agora
-```bash
-sudo sysctl -p /etc/sysctl.d/99-restart-on-panic.conf
-```
-
-### Desativar Interface Gráfica (Opcional - Poupança de RAM)
-```bash
-sudo systemctl disable phosh
-sudo systemctl stop phosh
-```
-if [ "$CAPACITY" -ge 80 ]; then
-if [ "$CURRENT_LIMIT" != "4" ]; then
-sudo chmod 666 /sys/class/power_supply/battery/charge_control_limit
-echo 4 | sudo tee /sys/class/power_supply/battery/charge_control_limit > /dev/null
-echo "[$NOW] Limite 80% ($CAPACITY%). Limit definido para 4." >> "$LOG_FILE"
-# /home/droidian/telegram.sh "🔋 Carga Bloqueada ($CAPACITY%)." &
-sleep 1
-fi
-
-elif [ "$CAPACITY" -le 20 ]; then
-if [ "$CURRENT_LIMIT" != "0" ]; then
-sudo chmod 666 /sys/class/power_supply/battery/charge_control_limit
-echo 0 | sudo tee /sys/class/power_supply/battery/charge_control_limit > /dev/null
-echo "[$NOW] Bateria 20% ($CAPACITY%). Limit definido para 0." >> "$LOG_FILE"
-# /home/droidian/telegram.sh "🪫 Carga Libertada ($CAPACITY%)." &
-sleep 1
-fi
-fi
